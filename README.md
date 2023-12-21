@@ -119,7 +119,7 @@ print(updates)
 
 ### Waiting for Specific Pin Update
 
-The `wait_for`` method allows you to asynchronously wait for updates to specific pins, specified by filters.
+The `wait_for` method allows you to asynchronously wait for updates to specific pins, specified by filters.
 
 ```python
 # Define callback keys for the pins you want to monitor
