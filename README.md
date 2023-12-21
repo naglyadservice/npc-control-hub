@@ -22,7 +22,10 @@ ssh-keygen -t rsa -C "GitHub_Mqtt_Device_Cluster"
 ```
 The file should show up as ~/.ssh/GitHub_Mqtt_Device_Cluster and ~/.ssh/GitHub_Mqtt_Device_Cluster.pub
 
-### 2. Create the SSH Configuration File
+### 2. Add deployleys
+add ~/.ssh/GitHub_Mqtt_Device_Cluster.pub ro deploykeys of repo [more here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#set-up-deploy-keys).
+
+### 3. Create the SSH Configuration File
 
 Next, use an editor to create a ~/.ssh/config file. Add the following contents.
 ```
@@ -31,7 +34,7 @@ Host GitHub_Mqtt_Device_Cluster
   IdentityFile ~/.ssh/GitHub_Mqtt_Device_Cluster
 ```
 
-### 3. Install:
+### 4. Install:
 
 #### If you use pip
 
