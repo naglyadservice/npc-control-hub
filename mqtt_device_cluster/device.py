@@ -274,12 +274,14 @@ class DeviceCluster:
     async def wait_for(
         self,
         cb_keys: list[CbKey],
+        allow_different_updates: bool = False,
     ) -> list[PinCache]:
         """
         Wait for pin updates corresponding to the given callback keys.
 
         Args:
             cb_keys (list[CbKey]): List of callback keys.
+            allow_different_updates (bool, optional): Allow use of different updates for cheking cb_keys. Defaults to False.
 
         Returns:
             list[PinCache]: List of pin updates.
@@ -299,14 +301,24 @@ class DeviceCluster:
             pins = []
             while cb_keys:
                 updates = await update_callback.get()
+                curr_cb_key = cb_keys.copy()
+                curr_pins = []
 
                 for key, pin in itertools.product(cb_keys, updates):
                     if key == pin:
-                        pins.append(pin)
+                        curr_pins.append(pin)
                         try:
-                            cb_keys.remove(key)
+                            curr_cb_key.remove(key)
                         except ValueError:
                             pass
+
+                if not curr_cb_key:
+                    pins = curr_pins
+                    break
+
+                if not allow_different_updates:
+                    pins.extend(curr_pins)
+                    cb_keys = curr_cb_key
 
             return pins
 
