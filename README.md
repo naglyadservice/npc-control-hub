@@ -124,7 +124,7 @@ print(updates)
 ## Modules
 
 - `DeviceCluster`: Main class for managing MQTT communication and device pin configurations.
-- `PinMode`, `PinState`: Enum onstants for defining pin modes and states.
+- `PinMode`, `PinState`: Enum constants for defining pin modes and states.
 - `ConfigPin`, `SetPin`: Typed dictionaries for pin configuration and setting.
 - `PinCache`: Dataclass for caching pin states.
 - `CbKey`: Dataclass for managing callback keys.
