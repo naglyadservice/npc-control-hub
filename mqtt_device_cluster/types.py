@@ -52,15 +52,17 @@ class PinCache:
 
 
 @dataclass(frozen=True)
-class CbKey:
+class CbFilter:
     device_id: str
     pin: int | type[ANY] = ANY
     mode: PinModeType | type[ANY] = ANY
     state: PinStateType | type[ANY] = ANY
 
-    def __eq__(self, __value: "PinCache | CbKey") -> bool:
-        if not isinstance(__value, (PinCache, CbKey)):
-            raise TypeError(f"__value must be PinCache or CbKey, not {type(__value)}")
+    def __eq__(self, __value: "PinCache | CbFilter") -> bool:
+        if not isinstance(__value, (PinCache, CbFilter)):
+            raise TypeError(
+                f"__value must be PinCache or CbFilter, not {type(__value)}"
+            )
 
         if self.device_id != __value.device_id:
             return False

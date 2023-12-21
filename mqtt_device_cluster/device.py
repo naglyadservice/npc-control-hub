@@ -9,7 +9,7 @@ from aiomqtt import Client as MQTTClient
 from aiomqtt import error
 
 from mqtt_device_cluster.lock import KeyLock
-from mqtt_device_cluster.types import CbKey, ConfigPin, PinCache, SetPin
+from mqtt_device_cluster.types import CbFilter, ConfigPin, PinCache, SetPin
 
 log = logging.getLogger(__name__)
 
@@ -29,15 +29,15 @@ class DeviceCluster:
         pins() -> dict[str, dict[int, PinCache]]: Get the dictionary of pins for each device.
         start() -> None: Start the device cluster and initialize the updates handler.
         _updates_handler() -> None: Handle incoming pin update messages.
-        send(topic: str, payload: str, cb_keys: list[CbKey] | None = None, timeout: int | None = None) -> list[PinCache] | None:
-            Send a message to a topic and wait for pin updates if cb_keys and timeout is specified.
+        send(topic: str, payload: str, filters: list[CbFilter] | None = None, timeout: int | None = None) -> list[PinCache] | None:
+            Send a message to a topic and wait for pin updates if filters and timeout is specified.
         config_pins(device_id: str, pins: list[ConfigPin], timeout: int | None = 5) -> list[PinCache] | None:
             Configure pins for a device.
         set_pins(device_id: str, pins: list[SetPin], timeout: int | None = 5) -> list[PinCache] | None:
             Set the state of pins for a device.
         update(device_id: str, pins: list[int] | None = None, timeout: int | None = 5) -> list[PinCache] | None:
             Request pin updates for a device.
-        wait_for(cb_keys: list[CbKey]) -> list[PinCache]:
+        wait_for(filters: list[CbFilter]) -> list[PinCache]:
             Wait for pin updates corresponding to the given callback keys.
 
     Usage:
@@ -181,38 +181,38 @@ class DeviceCluster:
         self,
         topic: str,
         payload: str,
-        cb_keys: list[CbKey] | None = None,
+        filters: list[CbFilter] | None = None,
         timeout: int | None = None,
     ) -> list[PinCache] | None:
         """
-        Send a message to a topic and wait for pin updates if cb_keys and timeout is specified.
+        Send a message to a topic and wait for pin updates if filters and timeout is specified.
 
         Args:
             topic (str): The MQTT topic to publish the message to.
             payload (str): The payload of the message.
-            cb_keys (list[CbKey] | None, optional): List of callback keys to wait for. Defaults to None.
+            filters (list[CbFilter] | None, optional): List of callback keys to wait for. Defaults to None.
             timeout (int | None, optional): Timeout in seconds for waiting for pin updates. Defaults to None.
 
         Returns:
-            list[PinCache] | None: List of pin updates or None if no cb_keys were specified.
+            list[PinCache] | None: List of pin updates or None if no filters were specified.
 
         Raises:
             RuntimeError: If the device cluster is not started.
-            ValueError: If cb_keys is not specified when timeout is specified.
+            ValueError: If filters is not specified when timeout is specified.
 
         """
         if not self._started:
             raise RuntimeError("DeviceCluster is not started, call start() first")
 
         async with self._key_lock(topic):
-            if timeout and not cb_keys:
-                raise ValueError("cb_keys must be specified if timeout is specified")
+            if timeout and not filters:
+                raise ValueError("filters must be specified if timeout is specified")
 
             await self._client.publish(topic, payload)
 
-            if cb_keys is not None and timeout is not None:
+            if filters is not None and timeout is not None:
                 return await asyncio.wait_for(
-                    self.wait_for(cb_keys=cb_keys), timeout=timeout
+                    self.wait_for(filters=filters), timeout=timeout
                 )
 
     async def config_pins(
@@ -235,8 +235,8 @@ class DeviceCluster:
         return await self.send(
             topic=f"device/{device_id}/pin/config",
             payload=json.dumps(pins),
-            cb_keys=[
-                CbKey(device_id=device_id, pin=pin["pin"], mode=pin["mode"])
+            filters=[
+                CbFilter(device_id=device_id, pin=pin["pin"], mode=pin["mode"])
                 for pin in pins
             ],
             timeout=timeout,
@@ -262,8 +262,8 @@ class DeviceCluster:
         return await self.send(
             topic=f"device/{device_id}/pin/set",
             payload=json.dumps(pins),
-            cb_keys=[
-                CbKey(device_id=device_id, pin=pin["pin"], state=pin["state"])
+            filters=[
+                CbFilter(device_id=device_id, pin=pin["pin"], state=pin["state"])
                 for pin in pins
             ],
             timeout=timeout,
@@ -292,36 +292,36 @@ class DeviceCluster:
         return await self.send(
             topic=f"device/{device_id}/pin/get",
             payload=json.dumps(pins),
-            cb_keys=[CbKey(device_id=device_id)],
+            filters=[CbFilter(device_id=device_id)],
             timeout=timeout,
         )
 
-    def _check_key_conflicts(self, cb_keys: list[CbKey]):
+    def _check_key_conflicts(self, filters: list[CbFilter]):
         """
         Check for conflicts between callback keys.
 
         Args:
-            cb_keys (list[CbKey]): List of callback keys.
+            filters (list[CbFilter]): List of callback keys.
 
         Raises:
             ValueError: If conflicts are found between callback keys.
 
         """
-        for key1, key2 in itertools.combinations(cb_keys, 2):
+        for key1, key2 in itertools.combinations(filters, 2):
             if key1 == key2:
                 raise ValueError(f"keys have conflicts ({key1}, {key2})")
 
     async def wait_for(
         self,
-        cb_keys: list[CbKey],
+        filters: list[CbFilter],
         allow_different_updates: bool = False,
     ) -> list[PinCache]:
         """
         Wait for pin updates corresponding to the given callback keys.
 
         Args:
-            cb_keys (list[CbKey]): List of callback keys.
-            allow_different_updates (bool, optional): Allow use of different updates for cheking cb_keys. Defaults to False.
+            filters (list[CbFilter]): List of callback keys.
+            allow_different_updates (bool, optional): Allow use of different updates for cheking filters. Defaults to False.
 
         Returns:
             list[PinCache]: List of pin updates.
@@ -332,30 +332,30 @@ class DeviceCluster:
         """
 
         async def update_callback(updates: list[PinCache]):
-            cb_keys_current = cb_keys.copy()
+            filters_current = filters.copy()
             curr_pins = []
 
-            for key, pin in itertools.product(cb_keys, updates):
+            for key, pin in itertools.product(filters, updates):
                 if key == pin:
                     curr_pins.append(pin)
                     try:
-                        cb_keys_current.remove(key)
+                        filters_current.remove(key)
                     except ValueError:
                         pass
 
-            if not cb_keys_current:
+            if not filters_current:
                 fut.set_result(curr_pins)
                 return
 
             if allow_different_updates:
                 pins.extend(curr_pins)
-                for key in cb_keys_current:
-                    cb_keys.remove(key)
+                for key in filters_current:
+                    filters.remove(key)
 
-                if not cb_keys:
+                if not filters:
                     fut.set_result(pins)
 
-        self._check_key_conflicts(cb_keys)
+        self._check_key_conflicts(filters)
 
         pins = []
         fut = asyncio.Future()

@@ -1,7 +1,7 @@
 from mqtt_device_cluster.device import DeviceCluster
 from mqtt_device_cluster.types import (
     ANY,
-    CbKey,
+    CbFilter,
     ConfigPin,
     PinCache,
     PinMode,
@@ -13,7 +13,7 @@ from mqtt_device_cluster.types import (
 
 __all__ = [
     "ANY",
-    "CbKey",
+    "CbFilter",
     "ConfigPin",
     "DeviceCluster",
     "PinCache",
