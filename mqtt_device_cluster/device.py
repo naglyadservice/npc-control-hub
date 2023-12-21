@@ -3,6 +3,7 @@ import itertools
 import json
 import logging
 import re
+from typing import Callable, Coroutine
 
 from aiomqtt import Client as MQTTClient
 from aiomqtt import error
@@ -73,7 +74,7 @@ class DeviceCluster:
         """
         self._client = client
         self._pins: dict[str, dict[int, PinCache]] = {}
-        self._update_callbacks: list[asyncio.Queue] = []
+        self._update_callbacks: list[Callable[[list[PinCache]], Coroutine]] = []
         self._key_lock = KeyLock()
         self._started = False
 
@@ -103,6 +104,45 @@ class DeviceCluster:
         asyncio.create_task(self._updates_handler())
         self._started = True
 
+    def add_update_callback(
+        self, callback: Callable[[list[PinCache]], Coroutine]
+    ) -> None:
+        """
+        Add a callback for receiving pin updates.
+
+        Args:
+            callback (Callable[[list[PinCache]], Coroutine]): The callback function.
+
+        Usage:
+            async def callback(updates: list[PinCache]):
+                pass
+
+            cluster = DeviceCluster(...)
+            cluster.add_update_callback(callback)
+
+        """
+        self._update_callbacks.append(callback)
+
+    def remove_update_callback(
+        self, callback: Callable[[list[PinCache]], Coroutine]
+    ) -> None:
+        """
+        Remove a callback for receiving pin updates.
+
+        Args:
+            callback (Callable[[list[PinCache]], Coroutine]): The callback function.
+
+        Raises:
+            ValueError: If the callback is not found.
+
+        """
+        for i, f in enumerate(self._update_callbacks):
+            if f is callback:
+                del self._update_callbacks[i]
+                return
+
+        raise ValueError("Callback not found")
+
     async def _updates_handler(self):
         """
         Handle incoming pin update messages.
@@ -122,15 +162,15 @@ class DeviceCluster:
                     device_id = m.group(1)
                     raw_pins = json.loads(message.payload)  # type: ignore
 
-                    for callback in self._update_callbacks:
-                        pins = [
-                            PinCache(device_id=device_id, **raw_pin)
-                            for raw_pin in raw_pins
-                        ]
-                        device_pins = self._pins.setdefault(device_id, {})
-                        device_pins.update({pin.pin: pin for pin in pins})
-                        callback.put_nowait(pins)
+                    pins = [
+                        PinCache(device_id=device_id, **raw_pin) for raw_pin in raw_pins
+                    ]
+                    device_pins = self._pins.setdefault(device_id, {})
+                    device_pins.update({pin.pin: pin for pin in pins})
 
+                    asyncio.gather(
+                        *[callback(pins) for callback in self._update_callbacks]
+                    )
             except error.MqttError as e:
                 if str(e) == "Disconnected during message iteration":
                     return
@@ -290,40 +330,40 @@ class DeviceCluster:
             ValueError: If conflicts are found between callback keys.
 
         """
+
+        async def update_callback(updates: list[PinCache]):
+            cb_keys_current = cb_keys.copy()
+            curr_pins = []
+
+            for key, pin in itertools.product(cb_keys, updates):
+                if key == pin:
+                    curr_pins.append(pin)
+                    try:
+                        cb_keys_current.remove(key)
+                    except ValueError:
+                        pass
+
+            if not cb_keys_current:
+                fut.set_result(curr_pins)
+                return
+
+            if allow_different_updates:
+                pins.extend(curr_pins)
+                for key in cb_keys_current:
+                    cb_keys.remove(key)
+
+                if not cb_keys:
+                    fut.set_result(pins)
+
         self._check_key_conflicts(cb_keys)
 
-        cb_keys = cb_keys.copy()
+        pins = []
+        fut = asyncio.Future()
 
-        update_callback = asyncio.Queue()
-        self._update_callbacks.append(update_callback)
+        self.add_update_callback(update_callback)
 
         try:
-            pins = []
-            while cb_keys:
-                updates = await update_callback.get()
-                curr_cb_key = cb_keys.copy()
-                curr_pins = []
-
-                for key, pin in itertools.product(cb_keys, updates):
-                    if key == pin:
-                        curr_pins.append(pin)
-                        try:
-                            curr_cb_key.remove(key)
-                        except ValueError:
-                            pass
-
-                if not curr_cb_key:
-                    pins = curr_pins
-                    break
-
-                if not allow_different_updates:
-                    pins.extend(curr_pins)
-                    cb_keys = curr_cb_key
-
-            return pins
+            return await fut
 
         finally:
-            for i, f in enumerate(self._update_callbacks):
-                if f is update_callback:
-                    del self._update_callbacks[i]
-                    break
+            self.remove_update_callback(update_callback)
