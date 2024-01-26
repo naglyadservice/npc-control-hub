@@ -104,9 +104,7 @@ class DeviceCluster:
         asyncio.create_task(self._updates_handler())
         self._started = True
 
-    def add_update_callback(
-        self, callback: Callable[[list[PinCache]], Coroutine]
-    ) -> None:
+    def add_update_callback(self, callback: Callable[[list[PinCache]], Coroutine]) -> None:
         """
         Add a callback for receiving pin updates.
 
@@ -123,9 +121,7 @@ class DeviceCluster:
         """
         self._update_callbacks.append(callback)
 
-    def remove_update_callback(
-        self, callback: Callable[[list[PinCache]], Coroutine]
-    ) -> None:
+    def remove_update_callback(self, callback: Callable[[list[PinCache]], Coroutine]) -> None:
         """
         Remove a callback for receiving pin updates.
 
@@ -147,7 +143,7 @@ class DeviceCluster:
         """
         Handle incoming pin update messages.
         TODO: add exception handling and reconnection
-
+        TODO: handling "open by phone call" update
         """
 
         async with self._client.messages() as messages:
@@ -160,17 +156,15 @@ class DeviceCluster:
                         continue
 
                     device_id = m.group(1)
+                    print(message.payload)
                     raw_pins = json.loads(message.payload)  # type: ignore
 
-                    pins = [
-                        PinCache(device_id=device_id, **raw_pin) for raw_pin in raw_pins
-                    ]
+                    pins = [PinCache(device_id=device_id, **raw_pin) for raw_pin in raw_pins]
                     device_pins = self._pins.setdefault(device_id, {})
                     device_pins.update({pin.pin: pin for pin in pins})
 
-                    asyncio.gather(
-                        *[callback(pins) for callback in self._update_callbacks]
-                    )
+                    asyncio.gather(*[callback(pins) for callback in self._update_callbacks])
+
             except error.MqttError as e:
                 if str(e) == "Disconnected during message iteration":
                     return
@@ -181,7 +175,7 @@ class DeviceCluster:
         self,
         topic: str,
         payload: str,
-        filters: list[CbFilter] | None = None,
+        cb_filters: list[CbFilter] | None = None,
         timeout: int | None = None,
     ) -> list[PinCache] | None:
         """
@@ -205,15 +199,13 @@ class DeviceCluster:
             raise RuntimeError("DeviceCluster is not started, call start() first")
 
         async with self._key_lock(topic):
-            if timeout and not filters:
+            if timeout and not cb_filters:
                 raise ValueError("filters must be specified if timeout is specified")
 
             await self._client.publish(topic, payload)
 
-            if filters is not None and timeout is not None:
-                return await asyncio.wait_for(
-                    self.wait_for(filters=filters), timeout=timeout
-                )
+            if cb_filters is not None and timeout is not None:
+                return await asyncio.wait_for(self.wait_for(filters=cb_filters), timeout=timeout)
 
     async def config_pins(
         self, device_id: str, pins: list[ConfigPin], timeout: int | None = 5
@@ -235,9 +227,8 @@ class DeviceCluster:
         return await self.send(
             topic=f"device/{device_id}/pin/config",
             payload=json.dumps(pins),
-            filters=[
-                CbFilter(device_id=device_id, pin=pin["pin"], mode=pin["mode"])
-                for pin in pins
+            cb_filters=[
+                CbFilter(device_id=device_id, pin=pin["pin"], mode=pin["mode"]) for pin in pins
             ],
             timeout=timeout,
         )
@@ -262,15 +253,26 @@ class DeviceCluster:
         return await self.send(
             topic=f"device/{device_id}/pin/set",
             payload=json.dumps(pins),
-            filters=[
-                CbFilter(device_id=device_id, pin=pin["pin"], state=pin["state"])
-                for pin in pins
+            cb_filters=[
+                CbFilter(device_id=device_id, pin=pin["pin"], state=pin["state"]) for pin in pins
             ],
             timeout=timeout,
         )
 
+    async def set_phones(self, device_id: str, phones: list[str]) -> None:
+        """
+        Set the phone numbers for a device.
+        Args:
+            device_id (str): The ID of the device.
+            phones (list[str]): List of phone numbers to set.
+        """
+        await self.send(topic=f"device/{device_id}/phone/set", payload=json.dumps(phones))
+
     async def update(
-        self, device_id: str, pins: list[int] | None = None, timeout: int | None = 5
+        self,
+        device_id: str,
+        pins: list[int] | None = None,
+        timeout: int | None = 5,
     ) -> list[PinCache] | None:
         """
         Request pin updates for a device and wait for pin updates.
@@ -292,7 +294,7 @@ class DeviceCluster:
         return await self.send(
             topic=f"device/{device_id}/pin/get",
             payload=json.dumps(pins),
-            filters=[CbFilter(device_id=device_id)],
+            cb_filters=[CbFilter(device_id=device_id)],
             timeout=timeout,
         )
 

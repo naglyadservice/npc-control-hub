@@ -27,8 +27,9 @@ class PinState(Constants):
     HIGH = 1
 
 
-PinModeType = Literal[-1] | Literal[1] | Literal[3] | Literal[5] | Literal[9]
-PinStateType = Literal[0] | Literal[1]
+PinModeType = Literal[-1, 1, 3, 5, 9]
+PinStateType = Literal[0, 1]
+VoiceCallStateType = Literal[-1, 0, 1]
 
 
 class SetPin(TypedDict):
@@ -41,6 +42,7 @@ class ConfigPin(TypedDict):
     pin: int
     mode: PinModeType
     state: NotRequired[PinStateType]
+    voice_call_state: NotRequired[VoiceCallStateType]
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,7 @@ class PinCache:
     pin: int
     mode: PinModeType
     state: PinStateType
+    voice_call_state: VoiceCallStateType
 
 
 @dataclass(frozen=True)
@@ -60,9 +63,7 @@ class CbFilter:
 
     def __eq__(self, __value: "PinCache | CbFilter") -> bool:
         if not isinstance(__value, (PinCache, CbFilter)):
-            raise TypeError(
-                f"__value must be PinCache or CbFilter, not {type(__value)}"
-            )
+            raise TypeError(f"__value must be PinCache or CbFilter, not {type(__value)}")
 
         if self.device_id != __value.device_id:
             return False
