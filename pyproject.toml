@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mqtt-device-cluster"
-version = "0.1.0"
+version = "0.1.1"
 description = "Module for managing a cluster of devices via MQTT"
 authors = ["toxazhl <zhltoxa@gmail.com>"]
 readme = "README.md"
