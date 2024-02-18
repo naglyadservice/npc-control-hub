@@ -1,80 +1,82 @@
-from dataclasses import dataclass
-from typing import Any, Literal, NotRequired, TypedDict
+import enum
+
+from pydantic import BaseModel
 
 
-class Constants:
-    def __init__(self) -> None:
-        raise NotImplementedError("This class is not supposed to be instantiated")
-
-    def __setattr__(self, __name: str, __value: Any) -> None:
-        raise TypeError(f"Cannot set attribute {__name} of {type(self)}")
-
-
-class ANY(Constants):
-    pass
+class Pin(enum.StrEnum):
+    RELAY_1 = "RELAY_1"
+    RELAY_2 = "RELAY_2"
+    OUTPUT_1 = "OUTPUT_1"
+    OUTPUT_2 = "OUTPUT_2"
+    INPUT_1 = "INPUT_1"
+    INPUT_2 = "INPUT_2"
 
 
-class PinMode(Constants):
+class PinMode(enum.IntEnum):
     INPUT = 1
     OUTPUT = 3
     INPUT_PULLUP = 5
     INPUT_PULLDOWN = 9
-    PIN_DISABLED = -1
+    DISABLED = -1
 
 
-class PinState(Constants):
+class PinState(enum.IntEnum):
     LOW = 0
     HIGH = 1
 
-
-PinModeType = Literal[-1, 1, 3, 5, 9]
-PinStateType = Literal[0, 1]
-VoiceCallStateType = Literal[-1, 0, 1]
+    def __invert__(self) -> "PinState":
+        return PinState.HIGH if self == PinState.LOW else PinState.LOW
 
 
-class SetPin(TypedDict):
-    pin: int
-    state: PinStateType
-    time: NotRequired[int]  # in milliseconds
+class VoiceCallState(enum.IntEnum):
+    LOW = 0
+    HIGH = 1
+    DISABLED = -1
 
 
-class ConfigPin(TypedDict):
-    pin: int
-    mode: PinModeType
-    state: NotRequired[PinStateType]
-    voice_call_state: NotRequired[VoiceCallStateType]
+class CallbackFilter(BaseModel):
+    pin: Pin | None = None
+    mode: PinMode | None = None
+    state: PinState | None = None
 
+    def __call__(self, value: "UpdatePin | CallbackFilter") -> bool:
+        if not isinstance(value, (UpdatePin, CallbackFilter)):
+            raise TypeError(
+                f"__value must be UpdatePin or CallbackFilter, not {type(value)}"
+            )
 
-@dataclass(frozen=True)
-class PinCache:
-    device_id: str
-    pin: int
-    mode: PinModeType
-    state: PinStateType
-    voice_call_state: VoiceCallStateType
-
-
-@dataclass(frozen=True)
-class CbFilter:
-    device_id: str
-    pin: int | type[ANY] = ANY
-    mode: PinModeType | type[ANY] = ANY
-    state: PinStateType | type[ANY] = ANY
-
-    def __eq__(self, __value: "PinCache | CbFilter") -> bool:
-        if not isinstance(__value, (PinCache, CbFilter)):
-            raise TypeError(f"__value must be PinCache or CbFilter, not {type(__value)}")
-
-        if self.device_id != __value.device_id:
+        if self.pin is not None and value.pin != self.pin:
             return False
 
-        if self.pin is not ANY and self.pin != __value.pin:
+        if self.mode is not None and value.mode != self.mode:
             return False
 
-        if self.mode is not ANY and self.mode != __value.mode:
-            return False
-
-        if self.state is not ANY and self.state != __value.state:
+        if self.state is not None and value.state != self.state:
             return False
 
         return True
+
+
+class UpdatePin(BaseModel):
+    pin: Pin
+    mode: PinMode
+    state: PinState
+    voice_call_state: VoiceCallState
+
+
+class UpdateCall(BaseModel):
+    phone_num: str
+    valid: bool
+
+
+class RawUpdate(BaseModel):
+    pins: list[UpdatePin] | None = None
+    call: UpdateCall | None = None
+    temperature_on_board: float | None = None
+    temperature_outdoor: float | None = None
+
+
+class Cache(BaseModel):
+    pins: dict[Pin, UpdatePin] = {}
+    temperature_on_board: float | None = None
+    temperature_outdoor: float | None = None

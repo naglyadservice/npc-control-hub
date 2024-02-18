@@ -2,17 +2,16 @@
 
 ## Overview
 
-The MQTT Device Cluster module is a comprehensive solution for managing MQTT communication with a variety of devices, especially focusing on pin configuration and state management in a clustered network environment. This Python module provides an easy-to-use interface for configuring and controlling device pins via MQTT, making it ideal for IoT applications.
+The MQTT Device Cluster module is a comprehensive solution for managing MQTT communication with a variety of devices, especially focusing on pin configuration and state management in a clustered network environment. This Python module provides an easy-to-use interface for controlling device pins via MQTT.
 
 ## Features
 
-- **MQTT Communication**: Leverage the MQTT protocol for efficient, real-time communication with a cluster of devices.
-- **Device Management**: Manage multiple devices in a clustered setup.
-- **Pin Configuration and Control**: Configure and control the state of pins on your devices.
-- **Asynchronous Communication**: Leverage asyncio for non-blocking MQTT communication.
-- **Flexible Callback Handling**: Use callback keys to handle specific device and pin updates.
-- **Error Handling and Reconnection Support**: Prepared to handle MQTT communication errors and reconnect as needed (TODO).
-- **Thread-safe Access**: Ensures thread-safe access to MQTT topics with a key-based locking mechanism.
+- **MQTT Communication**
+- **Device Management**
+- **Pin read and write**
+- **Asynchronous Communication**
+- **Flexible Callback Handling**
+- **Thread-safe Access**:
 
 ## Installation
 
@@ -49,22 +48,13 @@ GitHub_Mqtt_Device_Cluster here is Host in  ~/.ssh/config file.
 ```bash
 poetry add myprivaterepo --git ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_device_cluster.git
 ```
-
-
-## Dependencies
-
-- Python 3.7+
-- `aiomqtt` library for asynchronous MQTT communication.
-
-Ensure that these dependencies are installed in your environment.
-
 ## Usage
 
 ### Basic Setup
 
 ```python
-from mqtt_device_cluster import DeviceCluster, PinMode, PinState
 import aiomqtt
+from mqtt_device_cluster import DeviceCluster, PinState, Pin
 
 # Initialize MQTT client and DeviceCluster
 mqtt_client = aiomqtt.Client(...)
@@ -75,33 +65,29 @@ async with mqtt_client:
     await cluster.start()
 ```
 
-### Configuring Pins
-
-Configure the pins for a specific device:
-
-```python
-await device_cluster.config_pins(
-    device_id="device123",
-    pins=[
-        {"pin": 13, "mode": PinMode.OUTPUT, "state": PinState.HIGH},
-        {"pin": 14, "mode": PinMode.OUTPUT, "state": PinState.LOW},
-    ],
-)
-```
 
 ### Setting Pin States
 
-Set the state of pins for a device:
-
 ```python
-updates = await device_cluster.set_pins(
-    device_id="device123",
-    pins=[
-        {"pin": 13, "state": PinState.LOW, "time": 500},
-        {"pin": 14, "state": PinState.HIGH, "time": 500},
+updates = await cluster.set_pins(
+    "ABCDE1234567",
+    [
+        {"pin": Pin.RELAY_1, "state": PinState.LOW},
+        {"pin": Pin.RELAY_2, "state": PinState.HIGH, "time": 1000},
+    ],
+).wait_responce()
+print(updates)
+```
+
+## or do not wait for controller responce
+```python
+await cluster.set_pins(
+    "ABCDE1234567",
+    [
+        {"pin": Pin.RELAY_1, "state": PinState.LOW},
+        {"pin": Pin.RELAY_2, "state": PinState.HIGH, "time": 1000},
     ],
 )
-print(updates)
 ```
 
 ### Requesting Pin Updates
@@ -109,11 +95,9 @@ print(updates)
 Request updates for specific pins of a device:
 
 ```python
-updates = await device_cluster.update(
-    device_id="device123",
-    pins=[13, 14],
-    timeout=5
-)
+updates = await cluster.update_pins(
+    "C89FABE0F908", [Pin.RELAY_1, Pin.RELAY_2]
+).wait_responce()
 print(updates)
 ```
 
@@ -124,41 +108,35 @@ The `wait_for` method allows you to asynchronously wait for updates to specific 
 ```python
 # Define callback keys for the pins you want to monitor
 filters = [
-    CbFilter(device_id="device123", pin=13, state=PinState.HIGH),
-    CbFilter(device_id="device123", pin=14, state=PinState.LOW)
+    CallbackFilter(pin=Pin.INPUT_1, state=PinState.HIGH),
+    CallbackFilter(pin=Pin.RELAY_1, state=PinState.LOW),
 ]
 
 # Wait for the specified pin updates
-updates = await cluster.wait_for(filters)
+updates = await cluster.wait_for("C89FABE0F908", filters)
 
 # Process the updates
 for update in updates:
-    print(f"Pin {update.pin} on device {update.device_id} updated to {update.state}")
+    print(f"Pin {update.pin} updated to {update.state}")
 ```
 
 ### Adding Update Callbacks
 The `add_update_callback` method allows you to add a callback function that gets called whenever there's an update to any pin's state. 
 
 ```python
-async def pin_update_callback(updates: list[PinCache]):
+async def pin_update_callback(device_id: str, updates: list[Update]):
     for update in updates:
-        print(f"Pin {update.pin} on device {update.device_id} updated to {update.state}")
+        print(f"Pin {update.pin} on device {device_id} updated to {update.state}")
 
 # Add the callback to the DeviceCluster
 cluster.add_update_callback(pin_update_callback)
 
-# The callback will now be called whenever there's a pin update
+# The callback will now be called for all updates
+# Also you can remoce callback
+cluster.remove_update_callback(pin_update_callback)
+
 
 ```
-
-## Modules
-
-- `DeviceCluster`: Main class for managing MQTT communication and device pin configurations.
-- `PinMode`, `PinState`: Enum constants for defining pin modes and states.
-- `ConfigPin`, `SetPin`: Typed dictionaries for pin configuration and setting.
-- `PinCache`: Dataclass for caching pin states.
-- `CbFilter`: Dataclass for managing callback keys.
-- `KeyLock`: A class for managing asynchronous locks.
 
 ## Documentation
 
