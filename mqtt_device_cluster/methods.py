@@ -1,7 +1,12 @@
-from typing import NotRequired, TypedDict
+import sys
 
-from .methods_base import ResponceDeviceMethod, DeviceMethod
-from .types import CallbackFilter, Pin, UpdatePin, PinState
+if sys.version_info >= (3, 12):
+    from typing import NotRequired, TypedDict
+else:
+    from typing_extensions import NotRequired, TypedDict
+
+from .methods_base import DeviceMethod, ResponceDeviceMethod
+from .types import CallbackFilter, Pin, PinState, UpdatePin
 
 
 class SetPinPayload(TypedDict):
