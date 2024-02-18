@@ -6,10 +6,10 @@ authors = ["toxazhl <zhltoxa@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.9,<=3.12"
 aiomqtt = "^1.2.1"
 msgpack = "^1.0.7"
-pydantic = "^2.6.1"
+pydantic = ">=2.4.1"
 
 
 [build-system]
