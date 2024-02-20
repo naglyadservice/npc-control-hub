@@ -83,7 +83,7 @@ class DeviceCluster:
                             #     bytes.fromhex(message.payload.hex()), raw=False
                             # )
                             # update = RawUpdate.model_validate(update_dict)
-                            update = RawUpdate.model_validate(message.payload)
+                            update = RawUpdate.model_validate_json(message.payload)
 
                             cache = self._cache.setdefault(device_id, Cache())
 
