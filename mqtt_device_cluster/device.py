@@ -1,12 +1,14 @@
 import asyncio
+import contextlib
 import itertools
 import json
 import logging
 import re
 from typing import Any, Callable, Coroutine
 
-from aiomqtt import Client as MQTTClient
-from aiomqtt import error
+import aiomqtt
+import msgpack
+import paho.mqtt.client as mqtt
 
 from .lock import KeyLock
 from .methods import (
@@ -22,7 +24,7 @@ log = logging.getLogger(__name__)
 
 
 class DeviceCluster:
-    def __init__(self, client: MQTTClient) -> None:
+    def __init__(self, client: aiomqtt.Client) -> None:
         self._client = client
         self._cache: dict[str, Cache] = {}
         self._update_callbacks: list[Callable[[str, RawUpdate], Coroutine]] = []
@@ -41,14 +43,10 @@ class DeviceCluster:
         asyncio.create_task(self._updates_handler())
         self._started = True
 
-    def add_update_callback(
-        self, callback: Callable[[str, RawUpdate], Coroutine]
-    ) -> None:
+    def add_update_callback(self, callback: Callable[[str, RawUpdate], Coroutine]) -> None:
         self._update_callbacks.append(callback)
 
-    def remove_update_callback(
-        self, callback: Callable[[str, RawUpdate], Coroutine]
-    ) -> None:
+    def remove_update_callback(self, callback: Callable[[str, RawUpdate], Coroutine]) -> None:
         for i, f in enumerate(self._update_callbacks):
             if f is callback:
                 del self._update_callbacks[i]
@@ -64,42 +62,56 @@ class DeviceCluster:
         """
 
         async with self._client.messages() as messages:
-            try:
-                await self._client.subscribe("device/+/update")
-                async for message in messages:
-                    m = re.search(r"device/(\w+)/update", str(message.topic))
-                    if m is None:
-                        log.warning("Invalid topic: %s", message.topic)
-                        continue
-
-                    device_id = m.group(1)
-                    update = RawUpdate.model_validate_json(message.payload)
-                    log.debug("Received update for device %s: %s", device_id, update)
-
-                    cache = self._cache.setdefault(device_id, Cache())
-
-                    if update.pins is not None:
-                        for pin in update.pins:
-                            cache.pins.update(pin)
-
-                    if update.temperature_on_board is not None:
-                        cache.temperature_on_board = update.temperature_on_board
-
-                    if update.temperature_outdoor is not None:
-                        cache.temperature_outdoor = update.temperature_outdoor
-
-                    asyncio.gather(
-                        *[
-                            callback(device_id, update)
-                            for callback in self._update_callbacks
-                        ]
+            while True:
+                try:
+                    await self._client.subscribe(
+                        "device/+/update",
+                        options=mqtt.SubscribeOptions(
+                            retainHandling=mqtt.SubscribeOptions.RETAIN_DO_NOT_SEND
+                        ),
                     )
+                    async for message in messages:
+                        try:
+                            m = re.search(r"device/(\w+)/update", str(message.topic))
+                            if m is None:
+                                log.warning("Invalid topic: %s", message.topic)
+                                continue
 
-            except error.MqttError as e:
-                if str(e) == "Disconnected during message iteration":
-                    return
+                            device_id = m.group(1)
 
-                raise
+                            # update_dict = msgpack.unpackb(
+                            #     bytes.fromhex(message.payload.hex()), raw=False
+                            # )
+                            # update = RawUpdate.model_validate(update_dict)
+                            update = RawUpdate.model_validate(message.payload)
+
+                            cache = self._cache.setdefault(device_id, Cache())
+
+                            if update.pins is not None:
+                                for pin in update.pins:
+                                    cache.pins[pin.pin] = pin
+
+                            if update.temperature_on_board is not None:
+                                cache.temperature_on_board = update.temperature_on_board
+
+                            if update.temperature_outdoor is not None:
+                                cache.temperature_outdoor = update.temperature_outdoor
+
+                            asyncio.gather(
+                                *[
+                                    callback(device_id, update)
+                                    for callback in self._update_callbacks
+                                ]
+                            )
+
+                        except Exception as e:
+                            log.exception("Error in updates handler")
+
+                except aiomqtt.error.MqttError as e:
+                    if str(e) == "Disconnected during message iteration":
+                        return
+
+                    log.exception("Error in updates handler")
 
     async def __call__(
         self,
@@ -120,6 +132,7 @@ class DeviceCluster:
             raise RuntimeError("DeviceCluster is not started, call start() first")
 
         async with self._key_lock(method.topic):
+            # await self._client.publish(method.topic, msgpack.packb(method.payload))
             await self._client.publish(method.topic, json.dumps(method.payload))
 
             if callback_filters is not None and timeout is not None:
@@ -128,13 +141,13 @@ class DeviceCluster:
                     timeout=timeout,
                 )
 
+            return None
+
     def set_pins(self, device_id: str, payload: list[SetPinPayload]) -> SetPinsMethod:
         return SetPinsMethod(device_id=device_id, payload=payload).as_(self)
 
     def set_phones(self, device_id: str, phones: list[str]) -> SetPhonesMethod:
-        return SetPhonesMethod(device_id=device_id, payload={"phone_list": phones}).as_(
-            self
-        )
+        return SetPhonesMethod(device_id=device_id, payload={"phone_list": phones}).as_(self)
 
     def update_pins(self, device_id: str, pins: list[Pin]) -> UpdatePinsMethod:
         return UpdatePinsMethod(device_id=device_id, payload=pins).as_(self)
@@ -171,10 +184,8 @@ class DeviceCluster:
             for filter_, pin in itertools.product(filters, update.pins):
                 if filter_(pin):
                     curr_pins.append(pin)
-                    try:
+                    with contextlib.suppress(ValueError):
                         filters_current.remove(filter_)
-                    except ValueError:
-                        pass
 
             if not filters_current:
                 fut.set_result(curr_pins)
