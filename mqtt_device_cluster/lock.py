@@ -8,8 +8,6 @@ class KeyLock:
 
     @asynccontextmanager
     async def __call__(self, id):
-        if not self._locks.get(id):
-            self._locks[id] = asyncio.Lock()
-        async with self._locks[id]:
+        lock = self._locks.setdefault(id, asyncio.Lock())
+        async with lock:
             yield
-        del self._locks[id]
