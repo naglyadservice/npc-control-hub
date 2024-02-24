@@ -18,7 +18,7 @@ from .methods import (
     UpdatePinsMethod,
 )
 from .methods_base import DeviceMethod
-from .types import Cache, CallbackFilter, Pin, RawUpdate, UpdatePin
+from .types import Cache, CallbackFilter, PinID, RawUpdate, UpdatePin
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class DeviceCluster:
 
                             if update.pins is not None:
                                 for pin in update.pins:
-                                    cache.pins[pin.pin] = pin
+                                    cache.pins[pin.id] = pin
 
                             if update.temperature_on_board is not None:
                                 cache.temperature_on_board = update.temperature_on_board
@@ -104,7 +104,7 @@ class DeviceCluster:
                                 ]
                             )
 
-                        except Exception as e:
+                        except Exception:
                             log.exception("Error in updates handler")
 
                 except aiomqtt.error.MqttError as e:
@@ -149,7 +149,7 @@ class DeviceCluster:
     def set_phones(self, device_id: str, phones: list[str]) -> SetPhonesMethod:
         return SetPhonesMethod(device_id=device_id, payload={"phone_list": phones}).as_(self)
 
-    def update_pins(self, device_id: str, pins: list[Pin]) -> UpdatePinsMethod:
+    def update_pins(self, device_id: str, pins: list[PinID]) -> UpdatePinsMethod:
         return UpdatePinsMethod(device_id=device_id, payload=pins).as_(self)
 
     def _check_filters_conflicts(self, filters: list[CallbackFilter]):

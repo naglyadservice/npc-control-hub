@@ -3,22 +3,26 @@ import enum
 from pydantic import BaseModel
 
 
-class RelayPin(enum.StrEnum):
+class RelayPinID(enum.StrEnum):
     RELAY_1 = "RELAY_1"
     RELAY_2 = "RELAY_2"
 
 
-class OutputPin(enum.StrEnum):
+class OutputPinID(enum.StrEnum):
     OUTPUT_1 = "OUTPUT_1"
     OUTPUT_2 = "OUTPUT_2"
 
 
-class InputPin(enum.StrEnum):
+class InputPinID(enum.StrEnum):
     INPUT_1 = "INPUT_1"
     INPUT_2 = "INPUT_2"
 
 
-class Pin(RelayPin, OutputPin, InputPin):
+WriteablePinID = RelayPinID | OutputPinID
+ReadablePinID = InputPinID
+
+
+class PinID(RelayPinID, OutputPinID, InputPinID):
     pass
 
 
@@ -45,7 +49,7 @@ class VoiceCallState(enum.IntEnum):
 
 
 class CallbackFilter(BaseModel):
-    pin: Pin | None = None
+    id: PinID | None = None
     mode: PinMode | None = None
     state: PinState | None = None
 
@@ -68,7 +72,7 @@ class CallbackFilter(BaseModel):
 
 
 class UpdatePin(BaseModel):
-    pin: Pin
+    id: PinID
     mode: PinMode
     state: PinState
     voice_call_state: VoiceCallState
@@ -87,6 +91,6 @@ class RawUpdate(BaseModel):
 
 
 class Cache(BaseModel):
-    pins: dict[Pin, UpdatePin] = {}
+    pins: dict[PinID, UpdatePin] = {}
     temperature_on_board: float | None = None
     temperature_outdoor: float | None = None
