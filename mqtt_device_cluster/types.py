@@ -3,13 +3,23 @@ import enum
 from pydantic import BaseModel
 
 
-class Pin(enum.StrEnum):
+class RelayPin(enum.StrEnum):
     RELAY_1 = "RELAY_1"
     RELAY_2 = "RELAY_2"
+
+
+class OutputPin(enum.StrEnum):
     OUTPUT_1 = "OUTPUT_1"
     OUTPUT_2 = "OUTPUT_2"
+
+
+class InputPin(enum.StrEnum):
     INPUT_1 = "INPUT_1"
     INPUT_2 = "INPUT_2"
+
+
+class Pin(RelayPin, OutputPin, InputPin):
+    pass
 
 
 class PinMode(enum.IntEnum):
