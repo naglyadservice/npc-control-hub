@@ -12,23 +12,23 @@ class PinID:
     INPUT_2 = "INPUT_2"
 
 
-class RelayPinID(enum.StrEnum):
-    RELAY_1 = PinID.RELAY_1
-    RELAY_2 = PinID.RELAY_2
+# class RelayPinID(enum.StrEnum):
+#     RELAY_1 = PinID.RELAY_1
+#     RELAY_2 = PinID.RELAY_2
 
 
-class OutputPinID(enum.StrEnum):
-    OUTPUT_1 = PinID.OUTPUT_1
-    OUTPUT_2 = PinID.OUTPUT_2
+# class OutputPinID(enum.StrEnum):
+#     OUTPUT_1 = PinID.OUTPUT_1
+#     OUTPUT_2 = PinID.OUTPUT_2
 
 
-class InputPinID(enum.StrEnum):
-    INPUT_1 = PinID.INPUT_1
-    INPUT_2 = PinID.INPUT_2
+# class InputPinID(enum.StrEnum):
+#     INPUT_1 = PinID.INPUT_1
+#     INPUT_2 = PinID.INPUT_2
 
 
-ReadablePinID = InputPinID
-WriteablePinID = RelayPinID | OutputPinID
+# ReadablePinID = InputPinID
+# WriteablePinID = RelayPinID | OutputPinID
 
 
 class PinMode(enum.IntEnum):
