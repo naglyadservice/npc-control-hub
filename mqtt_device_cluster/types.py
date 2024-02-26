@@ -18,11 +18,15 @@ class InputPinID(enum.StrEnum):
     INPUT_2 = "INPUT_2"
 
 
-WriteablePinID = RelayPinID | OutputPinID
-ReadablePinID = InputPinID
+class WriteablePinID(RelayPinID, OutputPinID):
+    pass
 
 
-class PinID(RelayPinID, OutputPinID, InputPinID):
+class ReadablePinID(InputPinID):
+    pass
+
+
+class PinID(WriteablePinID, ReadablePinID):
     pass
 
 
