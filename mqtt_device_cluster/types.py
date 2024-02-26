@@ -3,31 +3,32 @@ import enum
 from pydantic import BaseModel
 
 
-class RelayPinID(enum.StrEnum):
+class PinID:
     RELAY_1 = "RELAY_1"
     RELAY_2 = "RELAY_2"
-
-
-class OutputPinID(enum.StrEnum):
     OUTPUT_1 = "OUTPUT_1"
     OUTPUT_2 = "OUTPUT_2"
-
-
-class InputPinID(enum.StrEnum):
     INPUT_1 = "INPUT_1"
     INPUT_2 = "INPUT_2"
 
 
-class WriteablePinID(RelayPinID, OutputPinID):
-    pass
+class RelayPinID(enum.StrEnum):
+    RELAY_1 = PinID.RELAY_1
+    RELAY_2 = PinID.RELAY_2
 
 
-class ReadablePinID(InputPinID):
-    pass
+class OutputPinID(enum.StrEnum):
+    OUTPUT_1 = PinID.OUTPUT_1
+    OUTPUT_2 = PinID.OUTPUT_2
 
 
-class PinID(WriteablePinID, ReadablePinID):
-    pass
+class InputPinID(enum.StrEnum):
+    INPUT_1 = PinID.INPUT_1
+    INPUT_2 = PinID.INPUT_2
+
+
+ReadablePinID = InputPinID
+WriteablePinID = RelayPinID | OutputPinID
 
 
 class PinMode(enum.IntEnum):
@@ -63,7 +64,7 @@ class CallbackFilter(BaseModel):
                 f"__value must be UpdatePin or CallbackFilter, not {type(value)}"
             )
 
-        if self.pin is not None and value.pin != self.pin:
+        if self.id is not None and value.id != self.id:
             return False
 
         if self.mode is not None and value.mode != self.mode:

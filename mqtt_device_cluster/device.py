@@ -7,7 +7,8 @@ import re
 from typing import Any, Callable, Coroutine
 
 import aiomqtt
-import msgpack
+
+# import msgpack
 import paho.mqtt.client as mqtt
 
 from .lock import KeyLock
@@ -43,10 +44,14 @@ class DeviceCluster:
         asyncio.create_task(self._updates_handler())
         self._started = True
 
-    def add_update_callback(self, callback: Callable[[str, RawUpdate], Coroutine]) -> None:
+    def add_update_callback(
+        self, callback: Callable[[str, RawUpdate], Coroutine]
+    ) -> None:
         self._update_callbacks.append(callback)
 
-    def remove_update_callback(self, callback: Callable[[str, RawUpdate], Coroutine]) -> None:
+    def remove_update_callback(
+        self, callback: Callable[[str, RawUpdate], Coroutine]
+    ) -> None:
         for i, f in enumerate(self._update_callbacks):
             if f is callback:
                 del self._update_callbacks[i]
@@ -83,7 +88,7 @@ class DeviceCluster:
                             #     bytes.fromhex(message.payload.hex()), raw=False
                             # )
                             # update = RawUpdate.model_validate(update_dict)
-                            update = RawUpdate.model_validate_json(message.payload)
+                            update = RawUpdate.model_validate_json(message.payload)  # type: ignore
 
                             cache = self._cache.setdefault(device_id, Cache())
 
@@ -147,7 +152,9 @@ class DeviceCluster:
         return SetPinsMethod(device_id=device_id, payload=payload).as_(self)
 
     def set_phones(self, device_id: str, phones: list[str]) -> SetPhonesMethod:
-        return SetPhonesMethod(device_id=device_id, payload={"phone_list": phones}).as_(self)
+        return SetPhonesMethod(device_id=device_id, payload={"phone_list": phones}).as_(
+            self
+        )
 
     def update_pins(self, device_id: str, pins: list[PinID]) -> UpdatePinsMethod:
         return UpdatePinsMethod(device_id=device_id, payload=pins).as_(self)
