@@ -6,11 +6,11 @@ else:
     from typing_extensions import NotRequired, TypedDict
 
 from .methods_base import DeviceMethod, ResponceDeviceMethod
-from .types import CallbackFilter, Pin, PinState, UpdatePin
+from .types import CallbackFilter, PinID, PinState, UpdatePin
 
 
 class SetPinPayload(TypedDict):
-    pin: Pin
+    pin: PinID
     state: PinState
     time: NotRequired[int]  # in milliseconds
 
@@ -23,7 +23,7 @@ class SetPinsMethod(ResponceDeviceMethod[list[UpdatePin]]):
     def callback_filters(self) -> list[CallbackFilter]:
         return [
             CallbackFilter(
-                pin=pin["pin"],
+                id=pin["pin"],
                 state=pin["state"] if "time" not in pin else ~pin["state"],
             )
             for pin in self.payload
@@ -40,9 +40,9 @@ class SetPhonesMethod(DeviceMethod):
 
 
 class UpdatePinsMethod(ResponceDeviceMethod[list[UpdatePin]]):
-    payload: list[Pin]
+    payload: list[PinID]
     __topic__: str = "device/{device_id}/pin/get"
 
     @property
     def callback_filters(self) -> list[CallbackFilter]:
-        return [CallbackFilter(pin=pin) for pin in self.payload]
+        return [CallbackFilter(id=pin) for pin in self.payload]

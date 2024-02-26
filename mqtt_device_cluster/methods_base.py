@@ -64,9 +64,7 @@ class ResponceHandler(BaseModel, Generic[ResponceType]):
     responce_timeout: float
 
     async def emit(self, client: DeviceCluster) -> ResponceType:
-        return await client(
-            self.original_method, self.callback_filters, self.responce_timeout
-        )
+        return await client(self.original_method, self.callback_filters, self.responce_timeout)
 
     def __await__(self) -> Generator[Any, None, ResponceType]:
         client = self.original_method._client
