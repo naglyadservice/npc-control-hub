@@ -39,7 +39,7 @@ async def test_update_pins(device_cluster: DeviceCluster, device_id: str):
         answer_payload = {
             "pins": [
                 {
-                    "id": pin_id,
+                    "pin": pin_id,
                     "mode": PinMode.INPUT,
                     "state": PinState.HIGH,
                     "voice_call_state": VoiceCallState.HIGH,
