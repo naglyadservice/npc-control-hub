@@ -6,11 +6,9 @@ import logging
 import re
 from typing import Any, Callable, Coroutine
 
-import aiomqtt
+from fastmqtt import FastMQTT, Message, Retain
 
 # import msgpack
-import paho.mqtt.client as mqtt
-
 from .lock import KeyLock
 from .methods import (
     SetPhonesMethod,
@@ -25,24 +23,24 @@ log = logging.getLogger(__name__)
 
 
 class DeviceCluster:
-    def __init__(self, client: aiomqtt.Client) -> None:
-        self._client = client
+    def __init__(self, fastmqtt: FastMQTT) -> None:
+        if fastmqtt._started:
+            raise RuntimeError("Client should not be started")
+
+        self._fastmqtt = fastmqtt
         self._cache: dict[str, Cache] = {}
         self._update_callbacks: list[Callable[[str, RawUpdate], Coroutine]] = []
         self._key_lock = KeyLock()
-        self._started = False
+
+        self._fastmqtt.register(
+            self._updates_handler,
+            "device/+/update",
+            retain_handling=Retain.DO_NOT_SEND,
+        )
 
     @property
     def cache(self) -> dict[str, Cache]:
         return self._cache
-
-    async def start(self) -> None:
-        """
-        Start the device cluster and initialize the updates handler.
-
-        """
-        asyncio.create_task(self._updates_handler())
-        self._started = True
 
     def add_update_callback(
         self, callback: Callable[[str, RawUpdate], Coroutine]
@@ -59,64 +57,42 @@ class DeviceCluster:
 
         raise ValueError("Callback not found")
 
-    async def _updates_handler(self):
+    async def _updates_handler(self, message: Message):
         """
         Handle incoming pin update messages.
         TODO: add exception handling and reconnection
         TODO: handling "open by phone call" update
         """
 
-        async with self._client.messages() as messages:
-            while True:
-                try:
-                    await self._client.subscribe(
-                        "device/+/update",
-                        options=mqtt.SubscribeOptions(
-                            retainHandling=mqtt.SubscribeOptions.RETAIN_DO_NOT_SEND
-                        ),
-                    )
-                    async for message in messages:
-                        try:
-                            m = re.search(r"device/(\w+)/update", str(message.topic))
-                            if m is None:
-                                log.warning("Invalid topic: %s", message.topic)
-                                continue
+        m = re.search(r"device/(\w+)/update", message.topic)
+        if m is None:
+            log.warning("Invalid topic: %s", message.topic)
+            return
 
-                            device_id = m.group(1)
+        device_id = m.group(1)
 
-                            # update_dict = msgpack.unpackb(
-                            #     bytes.fromhex(message.payload.hex()), raw=False
-                            # )
-                            # update = RawUpdate.model_validate(update_dict)
-                            update = RawUpdate.model_validate_json(message.payload)  # type: ignore
+        # update_dict = msgpack.unpackb(
+        #     bytes.fromhex(message.payload.hex()), raw=False
+        # )
+        # update = RawUpdate.model_validate(update_dict)
+        update = RawUpdate.model_validate_json(message.payload.raw())
+        print(f"Got update: {update}")
 
-                            cache = self._cache.setdefault(device_id, Cache())
+        cache = self._cache.setdefault(device_id, Cache())
 
-                            if update.pins is not None:
-                                for pin in update.pins:
-                                    cache.pins[pin.id] = pin
+        if update.pins is not None:
+            for pin in update.pins:
+                cache.pins[pin.id] = pin
 
-                            if update.temperature_on_board is not None:
-                                cache.temperature_on_board = update.temperature_on_board
+        if update.temperature_on_board is not None:
+            cache.temperature_on_board = update.temperature_on_board
 
-                            if update.temperature_outdoor is not None:
-                                cache.temperature_outdoor = update.temperature_outdoor
+        if update.temperature_outdoor is not None:
+            cache.temperature_outdoor = update.temperature_outdoor
 
-                            asyncio.gather(
-                                *[
-                                    callback(device_id, update)
-                                    for callback in self._update_callbacks
-                                ]
-                            )
-
-                        except Exception:
-                            log.exception("Error in updates handler")
-
-                except aiomqtt.error.MqttError as e:
-                    if str(e) == "Disconnected during message iteration":
-                        return
-
-                    log.exception("Error in updates handler")
+        asyncio.gather(
+            *[callback(device_id, update) for callback in self._update_callbacks]
+        )
 
     async def __call__(
         self,
@@ -133,12 +109,9 @@ class DeviceCluster:
             TimeoutError: If timeout is reached.
 
         """
-        if not self._started:
-            raise RuntimeError("DeviceCluster is not started, call start() first")
-
         async with self._key_lock(method.topic):
-            # await self._client.publish(method.topic, msgpack.packb(method.payload))
-            await self._client.publish(method.topic, json.dumps(method.payload))
+            # await self._fastmqtt.publish(method.topic, msgpack.packb(method.payload))
+            await self._fastmqtt.publish(method.topic, json.dumps(method.payload))
 
             if callback_filters is not None and timeout is not None:
                 return await asyncio.wait_for(

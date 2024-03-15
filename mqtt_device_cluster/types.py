@@ -3,7 +3,7 @@ import enum
 from pydantic import BaseModel
 
 
-class PinID:
+class PinID(enum.StrEnum):
     RELAY_1 = "RELAY_1"
     RELAY_2 = "RELAY_2"
     OUTPUT_1 = "OUTPUT_1"

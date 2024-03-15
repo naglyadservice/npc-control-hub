@@ -6,11 +6,17 @@ authors = ["toxazhl <zhltoxa@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-aiomqtt = "^1.2.1"
+python = "^3.8"
 msgpack = "^1.0.7"
 pydantic = ">=2.4.1"
+fastmqtt = {git = "https://github.com/toxazhl/fastmqtt"}
+pytest-mqtt = "^0.3.1"
+pytest = "^8.1.1"
+pytest-asyncio = "^0.23.5.post1"
 
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["poetry-core"]
