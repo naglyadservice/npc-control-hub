@@ -1,6 +1,6 @@
 import enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PinID(enum.StrEnum):
@@ -32,11 +32,15 @@ class PinID(enum.StrEnum):
 
 
 class PinMode(enum.IntEnum):
-    INPUT = 1
-    OUTPUT = 3
-    INPUT_PULLUP = 5
-    INPUT_PULLDOWN = 9
-    DISABLED = -1
+    INPUT = 0x01
+    OUTPUT = 0x03
+    PULLUP = 0x04
+    INPUT_PULLUP = 0x05
+    PULLDOWN = 0x08
+    INPUT_PULLDOWN = 0x09
+    OPEN_DRAIN = 0x10
+    OUTPUT_OPEN_DRAIN = 0x13
+    ANALOG = 0xC0
 
 
 class PinState(enum.IntEnum):
@@ -60,9 +64,7 @@ class CallbackFilter(BaseModel):
 
     def __call__(self, value: "UpdatePin | CallbackFilter") -> bool:
         if not isinstance(value, (UpdatePin, CallbackFilter)):
-            raise TypeError(
-                f"__value must be UpdatePin or CallbackFilter, not {type(value)}"
-            )
+            raise TypeError(f"__value must be UpdatePin or CallbackFilter, not {type(value)}")
 
         if self.id is not None and value.id != self.id:
             return False
@@ -77,7 +79,7 @@ class CallbackFilter(BaseModel):
 
 
 class UpdatePin(BaseModel):
-    id: PinID
+    id: PinID = Field(alias="pin")
     mode: PinMode
     state: PinState
     voice_call_state: VoiceCallState
