@@ -53,7 +53,9 @@ async def test_update_pins(device_cluster: DeviceCluster, device_id: str):
             json.dumps(answer_payload),
         )
 
-    subscription = device_cluster._fastmqtt.register(update_pins_answer, f"device/{device_id}/pin/get")
+    subscription = device_cluster._fastmqtt.register(
+        update_pins_answer, f"device/{device_id}/pin/get"
+    )
     await device_cluster._fastmqtt._sub_manager.subscribe(subscription)
 
     async with asyncio.timeout(5):
@@ -61,3 +63,4 @@ async def test_update_pins(device_cluster: DeviceCluster, device_id: str):
             device_id,
             [PinID.INPUT_1, PinID.OUTPUT_1],
         ).wait_responce()
+        print(update)
