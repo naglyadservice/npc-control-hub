@@ -64,7 +64,9 @@ class CallbackFilter(BaseModel):
 
     def __call__(self, value: "UpdatePin | CallbackFilter") -> bool:
         if not isinstance(value, (UpdatePin, CallbackFilter)):
-            raise TypeError(f"__value must be UpdatePin or CallbackFilter, not {type(value)}")
+            raise TypeError(
+                f"__value must be UpdatePin or CallbackFilter, not {type(value)}"
+            )
 
         if self.id is not None and value.id != self.id:
             return False
@@ -82,7 +84,9 @@ class UpdatePin(BaseModel):
     id: PinID = Field(alias="pin")
     mode: PinMode
     state: PinState
-    voice_call_state: VoiceCallState
+    # voice_call_state: VoiceCallState
+
+    model_config = {"extra": "ignore"}
 
 
 class UpdateCall(BaseModel):
