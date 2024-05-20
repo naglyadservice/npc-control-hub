@@ -17,12 +17,12 @@ The NPC Control Hub is a comprehensive solution for managing MQTT communication 
 #### If you use pip
 
 ```bash
-pip install git+ssh://git@github.com/naglyadservice/mqtt_control_hub.git
+pip install git+ssh://git@github.com/naglyadservice/npc-control-hub.git
 ```
 
 #### If you use Poetry
 ```bash
-poetry add myprivaterepo --git ssh://git@github.co/naglyadservice/mqtt_control_hub.git
+poetry add myprivaterepo --git ssh://git@github.co/naglyadservice/npc-control-hub.git
 ```
 ## Usage
 ### Setting Pin States
