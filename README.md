@@ -1,8 +1,8 @@
-# README.md for MQTT Device Cluster Module
+# README.md for NPC Control Hub
 
 ## Overview
 
-The MQTT Device Cluster module is a comprehensive solution for managing MQTT communication with a variety of devices, especially focusing on pin configuration and state management in a clustered network environment. This Python module provides an easy-to-use interface for controlling device pins via MQTT.
+The NPC Control Hub is a comprehensive solution for managing MQTT communication with a variety of devices, especially focusing on pin configuration and state management in a clustered network environment. This Python module provides an easy-to-use interface for controlling device pins via MQTT.
 
 ## Features
 
@@ -14,67 +14,35 @@ The MQTT Device Cluster module is a comprehensive solution for managing MQTT com
 - **Thread-safe Access**:
 
 ## Installation
-
-### 1. Create a New SSH key
-```bash
-ssh-keygen -t rsa -C "GitHub_Mqtt_Device_Cluster"
-```
-The file should show up as ~/.ssh/GitHub_Mqtt_Device_Cluster and ~/.ssh/GitHub_Mqtt_Device_Cluster.pub
-
-### 2. Add deployleys
-add ~/.ssh/GitHub_Mqtt_Device_Cluster.pub ro deploykeys of repo [more here](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys#set-up-deploy-keys).
-
-### 3. Create the SSH Configuration File
-
-Next, use an editor to create a ~/.ssh/config file. Add the following contents.
-```
-Host GitHub_Mqtt_Device_Cluster
-  HostName github.com
-  IdentityFile ~/.ssh/GitHub_Mqtt_Device_Cluster
-```
-
-### 4. Install:
-
 #### If you use pip
 
 ```bash
-pip install git+ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_control_hub.git
+pip install git+ssh://git@github.com/naglyadservice/mqtt_control_hub.git
 ```
-
-GitHub_Mqtt_Device_Cluster here is Host in  ~/.ssh/config file.
-
 
 #### If you use Poetry
 ```bash
-poetry add myprivaterepo --git ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_control_hub.git
+poetry add myprivaterepo --git ssh://git@github.co/naglyadservice/mqtt_control_hub.git
 ```
 ## Usage
 ### Setting Pin States
 
 ```python
-import asyncio
-
 from fastmqtt import FastMQTT
 
-from mqtt_control_hub import ControlHub, PinID, PinState
+from npc_control_hub import ControlHub, PinID
 
 
 async def main():
     fastmqtt = FastMQTT("mqtt.eclipse.org")
-    cluster = ControlHub(fastmqtt)
 
-    async with fastmqtt:
-        await cluster.set_pins(
-            "ABCDE1234567",
-            [
-                {"pin": PinID.RELAY_1, "state": PinState.LOW},
-                {"pin": PinID.RELAY_2, "state": PinState.HIGH, "time": 1000},
-            ],
-        )
+    # Start the cluster
+    async with ControlHub(fastmqtt) as control_hub:
+        update = await control_hub.update_pins(
+            "ABCDE1234567", [PinID.INPUT_1, PinID.INPUT_2]
+        ).wait_responce()
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        print(update)
 
 ```
 

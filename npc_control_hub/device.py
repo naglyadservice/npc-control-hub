@@ -110,7 +110,7 @@ class ControlHub:
         Send a message to a topic and wait for pin updates if filters and timeout is specified.
 
         Raises:
-            RuntimeError: If the device cluster is not started.
+
             ValueError: If filters is not specified when timeout is specified.
             TimeoutError: If timeout is reached.
 
