@@ -1,33 +1,24 @@
-from mqtt_device_cluster.device import DeviceCluster
-from mqtt_device_cluster.types import (
+from npc_control_hub.device import ControlHub
+from npc_control_hub.types import (
     Cache,
     CallbackFilter,
-    # InputPinID,
-    # OutputPinID,
     PinID,
     PinMode,
     PinState,
     RawUpdate,
-    # ReadablePinID,
-    # RelayPinID,
     UpdateCall,
     UpdatePin,
     VoiceCallState,
 )
 
 __all__ = [
-    "DeviceCluster",
+    "ControlHub",
     "Cache",
     "CallbackFilter",
     "PinID",
     "PinMode",
     "PinState",
     "RawUpdate",
-    # "RelayPinID",
-    # "InputPinID",
-    # "WriteablePinID",
-    # "ReadablePinID",
-    # "OutputPinID",
     "UpdateCall",
     "UpdatePin",
     "VoiceCallState",

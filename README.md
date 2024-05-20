@@ -38,7 +38,7 @@ Host GitHub_Mqtt_Device_Cluster
 #### If you use pip
 
 ```bash
-pip install git+ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_device_cluster.git
+pip install git+ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_control_hub.git
 ```
 
 GitHub_Mqtt_Device_Cluster here is Host in  ~/.ssh/config file.
@@ -46,7 +46,7 @@ GitHub_Mqtt_Device_Cluster here is Host in  ~/.ssh/config file.
 
 #### If you use Poetry
 ```bash
-poetry add myprivaterepo --git ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_device_cluster.git
+poetry add myprivaterepo --git ssh://git@GitHub_Mqtt_Device_Cluster/naglyadservice/mqtt_control_hub.git
 ```
 ## Usage
 ### Setting Pin States
@@ -56,12 +56,12 @@ import asyncio
 
 from fastmqtt import FastMQTT
 
-from mqtt_device_cluster import DeviceCluster, PinID, PinState
+from mqtt_control_hub import ControlHub, PinID, PinState
 
 
 async def main():
     fastmqtt = FastMQTT("mqtt.eclipse.org")
-    cluster = DeviceCluster(fastmqtt)
+    cluster = ControlHub(fastmqtt)
 
     async with fastmqtt:
         await cluster.set_pins(

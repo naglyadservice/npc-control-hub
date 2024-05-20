@@ -1,19 +1,20 @@
 [tool.poetry]
-name = "mqtt-device-cluster"
-version = "0.2.8"
-description = "Module for managing a cluster of devices via MQTT"
+name = "npc-control-hub"
+version = "0.3.0"
+description = "Control hub for NPCs"
 authors = ["toxazhl <zhltoxa@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 msgpack = "^1.0.7"
 pydantic = ">=2.4.1"
 fastmqtt = {git = "https://github.com/toxazhl/fastmqtt"}
-pytest-mqtt = "^0.3.1"
-pytest = "^8.1.1"
-pytest-asyncio = "^0.23.5.post1"
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.2.1"
+pytest-asyncio = "^0.23.7"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

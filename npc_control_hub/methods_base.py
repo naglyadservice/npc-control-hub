@@ -15,7 +15,7 @@ from typing_extensions import Self
 from .types import CallbackFilter
 
 if TYPE_CHECKING:
-    from .device import DeviceCluster
+    from .device import ControlHub
 
 ResponceType = TypeVar("ResponceType", bound=Any)
 
@@ -26,17 +26,17 @@ class DeviceMethod(BaseModel, ABC):
 
     __topic__: str
 
-    _client: DeviceCluster = PrivateAttr()
+    _client: ControlHub = PrivateAttr()
 
     @property
     def topic(self) -> str:
         return self.__topic__.format(device_id=self.device_id)
 
-    def as_(self, client: DeviceCluster) -> Self:
+    def as_(self, client: ControlHub) -> Self:
         self._client = client
         return self
 
-    async def emit(self, client: DeviceCluster) -> None:
+    async def emit(self, client: ControlHub) -> None:
         return await client(self)
 
     def __await__(self) -> Generator[Any, None, None]:
@@ -63,7 +63,7 @@ class ResponceHandler(BaseModel, Generic[ResponceType]):
     callback_filters: list[CallbackFilter]
     responce_timeout: float
 
-    async def emit(self, client: DeviceCluster) -> ResponceType:
+    async def emit(self, client: ControlHub) -> ResponceType:
         return await client(self.original_method, self.callback_filters, self.responce_timeout)
 
     def __await__(self) -> Generator[Any, None, ResponceType]:

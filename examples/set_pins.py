@@ -2,15 +2,14 @@ import asyncio
 
 from fastmqtt import FastMQTT
 
-from mqtt_device_cluster import DeviceCluster, PinID, PinState
+from npc_control_hub import ControlHub, PinID, PinState
 
 
 async def main():
     fastmqtt = FastMQTT("mqtt.eclipse.org")
-    cluster = DeviceCluster(fastmqtt)
 
-    async with fastmqtt:
-        await cluster.set_pins(
+    async with ControlHub(fastmqtt) as control_hub:
+        await control_hub.set_pins(
             "ABCDE1234567",
             [
                 {"pin": PinID.RELAY_1, "state": PinState.LOW},

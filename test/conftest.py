@@ -1,7 +1,7 @@
 import pytest
 from fastmqtt import FastMQTT
 
-from mqtt_device_cluster import DeviceCluster
+from npc_control_hub import ControlHub
 
 
 @pytest.fixture(scope="session")
@@ -10,8 +10,8 @@ def device_id():
 
 
 @pytest.fixture(scope="session")
-async def device_cluster(mosquitto: tuple[str, int]):
-    fastmqtt = FastMQTT(mosquitto[0], int(mosquitto[1]))
-    device_cluster = DeviceCluster(fastmqtt)
-    async with fastmqtt:
-        yield device_cluster
+# async def control_hub(mosquitto: tuple[str, int]):
+async def control_hub():
+    fastmqtt = FastMQTT("test.mosquitto.org")
+    async with ControlHub(fastmqtt) as control_hub:
+        yield control_hub

@@ -2,23 +2,22 @@ import asyncio
 
 from fastmqtt import FastMQTT
 
-from mqtt_device_cluster import DeviceCluster, RawUpdate
+from npc_control_hub import ControlHub, RawUpdate
 
 
 async def main():
     fastmqtt = FastMQTT("mqtt.eclipse.org")
-    cluster = DeviceCluster(fastmqtt)
 
-    async with fastmqtt:
+    async with ControlHub(fastmqtt) as control_hub:
 
         async def pin_update_callback(device_id: str, update: RawUpdate):
             print(f"Got update from {device_id}: {update}")
 
-        # Add the callback to the DeviceCluster
-        cluster.add_update_callback(pin_update_callback)
+        # Add the callback to the ControlHub
+        control_hub.add_update_callback(pin_update_callback)
         await asyncio.sleep(10)
         # Also you can remoce callback
-        cluster.remove_update_callback(pin_update_callback)
+        control_hub.remove_update_callback(pin_update_callback)
 
 
 if __name__ == "__main__":

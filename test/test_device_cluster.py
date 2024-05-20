@@ -3,12 +3,12 @@ import asyncio
 import pytest
 from fastmqtt import Message
 
-from mqtt_device_cluster import DeviceCluster, PinID, PinMode, PinState, VoiceCallState
+from npc_control_hub import ControlHub, PinID, PinMode, PinState, VoiceCallState
 
 
 @pytest.mark.asyncio(scope="session")
-async def test_set_pins(device_cluster: DeviceCluster, device_id: str):
-    await device_cluster.set_pins(
+async def test_set_pins(control_hub: ControlHub, device_id: str):
+    await control_hub.set_pins(
         device_id,
         [
             {
@@ -25,15 +25,15 @@ async def test_set_pins(device_cluster: DeviceCluster, device_id: str):
 
 
 @pytest.mark.asyncio(scope="session")
-async def test_set_phones(device_cluster: DeviceCluster, device_id: str):
-    await device_cluster.set_phones(
+async def test_set_phones(control_hub: ControlHub, device_id: str):
+    await control_hub.set_phones(
         device_id,
         ["38099999999", "380911111111"],
     )
 
 
 @pytest.mark.asyncio(scope="session")
-async def test_update_pins(device_cluster: DeviceCluster, device_id: str):
+async def test_update_pins(control_hub: ControlHub, device_id: str):
     async def update_pins_answer(message: Message):
         payload = message.payload.json()
         answer_payload = {
@@ -53,13 +53,13 @@ async def test_update_pins(device_cluster: DeviceCluster, device_id: str):
             json.dumps(answer_payload),
         )
 
-    subscription = device_cluster._fastmqtt.register(
+    subscription = control_hub._fastmqtt.register(
         update_pins_answer, f"device/{device_id}/pin/get"
     )
-    await device_cluster._fastmqtt._sub_manager.subscribe(subscription)
+    await control_hub._fastmqtt._sub_manager.subscribe(subscription)
 
     async with asyncio.timeout(5):
-        update = await device_cluster.update_pins(
+        update = await control_hub.update_pins(
             device_id,
             [PinID.INPUT_1, PinID.OUTPUT_1],
         ).wait_responce()

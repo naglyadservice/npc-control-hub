@@ -2,9 +2,9 @@ import asyncio
 
 from fastmqtt import FastMQTT
 
-from mqtt_device_cluster import (
+from npc_control_hub import (
     CallbackFilter,
-    DeviceCluster,
+    ControlHub,
     PinID,
     PinState,
 )
@@ -12,16 +12,15 @@ from mqtt_device_cluster import (
 
 async def main():
     fastmqtt = FastMQTT("mqtt.eclipse.org")
-    cluster = DeviceCluster(fastmqtt)
 
     # Start the cluster
-    async with fastmqtt:
+    async with ControlHub(fastmqtt) as control_hub:
         filters = [
             CallbackFilter(id=PinID.INPUT_1, state=PinState.HIGH),
             CallbackFilter(id=PinID.RELAY_1, state=PinState.LOW),
         ]
 
-        updates = await cluster.wait_for("C89FABE0F908", filters)
+        updates = await control_hub.wait_for("C89FABE0F908", filters)
         for update in updates:
             print(f"Pin {update.id} updated to {update.state}")
 

@@ -22,7 +22,7 @@ from .types import Cache, CallbackFilter, PinID, RawUpdate, UpdatePin
 log = logging.getLogger(__name__)
 
 
-class DeviceCluster:
+class ControlHub:
     def __init__(self, fastmqtt: FastMQTT) -> None:
         if fastmqtt._started:
             raise RuntimeError("Client should not be started")
@@ -41,6 +41,13 @@ class DeviceCluster:
     @property
     def cache(self) -> dict[str, Cache]:
         return self._cache
+
+    async def __aenter__(self) -> "ControlHub":
+        await self._fastmqtt.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+        await self._fastmqtt.__aexit__(exc_type, exc_value, traceback)
 
     def add_update_callback(
         self, callback: Callable[[str, RawUpdate], Coroutine]
