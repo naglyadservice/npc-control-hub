@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
     Any,
+    Coroutine,
     Generator,
     Generic,
     TypeVar,
@@ -39,9 +40,12 @@ class DeviceMethod(BaseModel, ABC):
     async def emit(self, client: ControlHub) -> None:
         return await client(self)
 
+    @property
+    def coro(self) -> Coroutine[Any, Any, None]:
+        return self.emit(self._client)
+
     def __await__(self) -> Generator[Any, None, None]:
-        client = self._client
-        return self.emit(client).__await__()
+        return self.coro.__await__()
 
 
 class ResponceDeviceMethod(DeviceMethod, Generic[ResponceType], ABC):
@@ -64,8 +68,13 @@ class ResponceHandler(BaseModel, Generic[ResponceType]):
     responce_timeout: float
 
     async def emit(self, client: ControlHub) -> ResponceType:
-        return await client(self.original_method, self.callback_filters, self.responce_timeout)
+        return await client(
+            self.original_method, self.callback_filters, self.responce_timeout
+        )
+
+    @property
+    def coro(self) -> Coroutine[Any, Any, ResponceType]:
+        return self.emit(self.original_method._client)
 
     def __await__(self) -> Generator[Any, None, ResponceType]:
-        client = self.original_method._client
-        return self.emit(client).__await__()
+        return self.coro.__await__()
