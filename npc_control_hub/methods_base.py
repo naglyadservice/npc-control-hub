@@ -48,7 +48,7 @@ class DeviceMethod(BaseModel, ABC):
         return self.coro.__await__()
 
 
-class ResponceDeviceMethod(DeviceMethod, Generic[ResponceType], ABC):
+class DeviceMethodWithResponce(DeviceMethod, Generic[ResponceType], ABC):
     @property
     @abstractmethod
     def callback_filters(self) -> list[CallbackFilter]:
@@ -63,7 +63,7 @@ class ResponceDeviceMethod(DeviceMethod, Generic[ResponceType], ABC):
 
 
 class ResponceHandler(BaseModel, Generic[ResponceType]):
-    original_method: ResponceDeviceMethod
+    original_method: DeviceMethodWithResponce
     callback_filters: list[CallbackFilter]
     responce_timeout: float
 

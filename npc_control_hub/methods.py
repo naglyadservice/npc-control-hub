@@ -5,7 +5,7 @@ if sys.version_info >= (3, 12):
 else:
     from typing_extensions import NotRequired, TypedDict
 
-from .methods_base import DeviceMethod, ResponceDeviceMethod
+from .methods_base import DeviceMethod, DeviceMethodWithResponce
 from .types import CallbackFilter, PinID, PinState, UpdatePin
 
 
@@ -15,7 +15,7 @@ class SetPinPayload(TypedDict):
     time: NotRequired[int]  # in milliseconds
 
 
-class SetPinsMethod(ResponceDeviceMethod[list[UpdatePin]]):
+class SetPinsMethod(DeviceMethodWithResponce[list[UpdatePin]]):
     payload: list[SetPinPayload]
     __topic__: str = "device/{device_id}/pin/set"
 
@@ -39,7 +39,7 @@ class SetPhonesMethod(DeviceMethod):
     __topic__: str = "device/{device_id}/phone/set"
 
 
-class UpdatePinsMethod(ResponceDeviceMethod[list[UpdatePin]]):
+class UpdatePinsMethod(DeviceMethodWithResponce[list[UpdatePin]]):
     payload: list[PinID]
     __topic__: str = "device/{device_id}/pin/get"
 
