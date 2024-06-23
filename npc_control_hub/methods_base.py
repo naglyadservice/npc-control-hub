@@ -54,7 +54,7 @@ class DeviceMethodWithResponce(DeviceMethod, Generic[ResponceType], ABC):
     def callback_filters(self) -> list[CallbackFilter]:
         raise NotImplementedError
 
-    def wait_responce(self, timeout: float = 10) -> ResponceHandler[ResponceType]:
+    def wait_responce(self, timeout: float | None = 10) -> ResponceHandler[ResponceType]:
         return ResponceHandler(
             original_method=self,
             callback_filters=self.callback_filters,
@@ -65,7 +65,7 @@ class DeviceMethodWithResponce(DeviceMethod, Generic[ResponceType], ABC):
 class ResponceHandler(BaseModel, Generic[ResponceType]):
     original_method: DeviceMethodWithResponce
     callback_filters: list[CallbackFilter]
-    responce_timeout: float
+    responce_timeout: float | None
 
     async def emit(self, client: ControlHub) -> ResponceType:
         return await client(
