@@ -119,11 +119,15 @@ class ControlHub:
             # await self._fastmqtt.publish(method.topic, msgpack.packb(method.payload))
             await self._fastmqtt.publish(method.topic, json.dumps(method.payload))
 
-            if callback_filters is not None and timeout is not None:
-                return await asyncio.wait_for(
-                    self.wait_for(device_id=method.device_id, filters=callback_filters),
-                    timeout=timeout,
+            if callback_filters is not None:
+                fut = self.wait_for(
+                    device_id=method.device_id, filters=callback_filters
                 )
+
+                if timeout is None:
+                    return await fut
+
+                return await asyncio.wait_for(fut, timeout=timeout)
 
             return None
 
