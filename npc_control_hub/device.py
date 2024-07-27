@@ -24,29 +24,29 @@ log = logging.getLogger(__name__)
 
 class ControlHub:
     def __init__(self, fastmqtt: FastMQTT) -> None:
-        if fastmqtt._started:
-            raise RuntimeError("Client should not be started")
-
         self._fastmqtt = fastmqtt
         self._cache: dict[str, Cache] = {}
         self._update_callbacks: list[Callable[[str, RawUpdate], Coroutine]] = []
         self._key_lock = KeyLock()
-
-        self._fastmqtt.register(
-            self._updates_handler,
-            "device/+/update",
-            retain_handling=Retain.DO_NOT_SEND,
-        )
 
     @property
     def cache(self) -> dict[str, Cache]:
         return self._cache
 
     async def __aenter__(self) -> "ControlHub":
-        await self._fastmqtt.__aenter__()
+        if not self._fastmqtt.started:
+            raise RuntimeError("FastMQTT is not started")
+
+        self._subscription, self.id = await self._fastmqtt.subscribe(
+            self._updates_handler,
+            "device/+/update",
+            retain_handling=Retain.DO_NOT_SEND,
+        )
+
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+        await self._fastmqtt.unsubscribe(self._subscription)
         await self._fastmqtt.__aexit__(exc_type, exc_value, traceback)
 
     def add_update_callback(
