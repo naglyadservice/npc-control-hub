@@ -37,7 +37,7 @@ class ControlHub:
         if not self._fastmqtt.started:
             raise RuntimeError("FastMQTT is not started")
 
-        self._subscription, self.id = await self._fastmqtt.subscribe(
+        self._subscription, self._subscription_id = await self._fastmqtt.subscribe(
             self._updates_handler,
             "device/+/update",
             retain_handling=Retain.DO_NOT_SEND,
@@ -46,7 +46,7 @@ class ControlHub:
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        await self._fastmqtt.unsubscribe(self._subscription)
+        await self._fastmqtt.unsubscribe(self._subscription_id)
         await self._fastmqtt.__aexit__(exc_type, exc_value, traceback)
 
     def add_update_callback(
