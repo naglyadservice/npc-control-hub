@@ -1,5 +1,6 @@
-import json
 import asyncio
+import json
+
 import pytest
 from fastmqtt import Message
 
@@ -35,7 +36,7 @@ async def test_set_phones(control_hub: ControlHub, device_id: str):
 @pytest.mark.asyncio(scope="session")
 async def test_update_pins(control_hub: ControlHub, device_id: str):
     async def update_pins_answer(message: Message):
-        payload = message.payload.json()
+        payload = json.loads(message.payload.raw())
         answer_payload = {
             "pins": [
                 {
@@ -48,15 +49,14 @@ async def test_update_pins(control_hub: ControlHub, device_id: str):
             ],
         }
         print("Sending update_pins answer")
-        await message.fastmqtt.publish(
+        await message.client.publish(
             f"device/{device_id}/update",
             json.dumps(answer_payload),
         )
 
-    subscription = control_hub._fastmqtt.register(
+    await control_hub._fastmqtt.subscribe(
         update_pins_answer, f"device/{device_id}/pin/get"
     )
-    await control_hub._fastmqtt._sub_manager.subscribe(subscription)
 
     async with asyncio.timeout(5):
         update = await control_hub.update_pins(

@@ -10,8 +10,7 @@ def device_id():
 
 
 @pytest.fixture(scope="session")
-# async def control_hub(mosquitto: tuple[str, int]):
 async def control_hub():
-    fastmqtt = FastMQTT("test.mosquitto.org")
-    async with ControlHub(fastmqtt) as control_hub:
-        yield control_hub
+    async with FastMQTT("mqtt.eclipse.org") as fastmqtt:
+        async with ControlHub(fastmqtt) as control_hub:
+            yield control_hub
