@@ -6,7 +6,8 @@ import logging
 import re
 from typing import Any, Callable, Coroutine
 
-from fastmqtt import FastMQTT, Message, Retain
+from fastmqtt import FastMQTT, Message, RetainHandling
+from fastmqtt.properties import PublishProperties
 
 # import msgpack
 from .lock import KeyLock
@@ -34,20 +35,19 @@ class ControlHub:
         return self._cache
 
     async def __aenter__(self) -> "ControlHub":
-        if not self._fastmqtt.started:
-            raise RuntimeError("FastMQTT is not started")
-
-        self._subscription, self._subscription_id = await self._fastmqtt.subscribe(
+        self._subscription = await self._fastmqtt.subscribe(
             self._updates_handler,
             "device/+/update",
-            retain_handling=Retain.DO_NOT_SEND,
+            qos=1,
+            retain_handling=RetainHandling.DO_NOT_SEND,
         )
 
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
-        await self._fastmqtt.unsubscribe(self._subscription_id)
-        await self._fastmqtt.__aexit__(exc_type, exc_value, traceback)
+        await self._fastmqtt.unsubscribe(
+            subscription=self._subscription, callback=self._updates_handler
+        )
 
     def add_update_callback(
         self, callback: Callable[[str, RawUpdate], Coroutine]
@@ -67,13 +67,12 @@ class ControlHub:
     async def _updates_handler(self, message: Message):
         """
         Handle incoming pin update messages.
-        TODO: add exception handling and reconnection
         TODO: handling "open by phone call" update
         """
 
         m = re.search(r"device/(\w+)/update", message.topic)
         if m is None:
-            log.warning("Invalid topic: %s", message.topic)
+            log.error("Invalid topic: %s", message.topic)
             return
 
         device_id = m.group(1)
@@ -104,7 +103,8 @@ class ControlHub:
         self,
         method: DeviceMethod,
         callback_filters: list[CallbackFilter] | None = None,
-        timeout: float | None = 10,
+        ttl: int | None = None,
+        timeout: float | None = None,
     ) -> Any:
         """
         Send a message to a topic and wait for pin updates if filters and timeout is specified.
@@ -117,7 +117,12 @@ class ControlHub:
         """
         async with self._key_lock(method.topic):
             # await self._fastmqtt.publish(method.topic, msgpack.packb(method.payload))
-            await self._fastmqtt.publish(method.topic, json.dumps(method.payload))
+            await self._fastmqtt.publish(
+                method.topic,
+                json.dumps(method.payload),
+                qos=1,
+                properties=PublishProperties(message_expiry_interval=ttl),
+            )
 
             if callback_filters is not None:
                 fut = self.wait_for(
@@ -131,16 +136,22 @@ class ControlHub:
 
             return None
 
-    def set_pins(self, device_id: str, payload: list[SetPinPayload]) -> SetPinsMethod:
-        return SetPinsMethod(device_id=device_id, payload=payload).as_(self)
+    def set_pins(
+        self, device_id: str, payload: list[SetPinPayload], ttl: int | None = None
+    ) -> SetPinsMethod:
+        return SetPinsMethod(device_id=device_id, payload=payload, ttl=ttl).as_(self)
 
-    def set_phones(self, device_id: str, phones: list[str]) -> SetPhonesMethod:
-        return SetPhonesMethod(device_id=device_id, payload={"phone_list": phones}).as_(
-            self
-        )
+    def set_phones(
+        self, device_id: str, phones: list[str], ttl: int | None = None
+    ) -> SetPhonesMethod:
+        return SetPhonesMethod(
+            device_id=device_id, payload={"phone_list": phones}, ttl=ttl
+        ).as_(self)
 
-    def update_pins(self, device_id: str, pins: list[PinID]) -> UpdatePinsMethod:
-        return UpdatePinsMethod(device_id=device_id, payload=pins).as_(self)
+    def update_pins(
+        self, device_id: str, pins: list[PinID], ttl: int | None = None
+    ) -> UpdatePinsMethod:
+        return UpdatePinsMethod(device_id=device_id, payload=pins, ttl=ttl).as_(self)
 
     def _check_filters_conflicts(self, filters: list[CallbackFilter]):
         """

@@ -24,6 +24,7 @@ ResponceType = TypeVar("ResponceType", bound=Any)
 class DeviceMethod(BaseModel, ABC):
     device_id: str
     payload: Any
+    ttl: int | None
 
     __topic__: str
 
@@ -38,7 +39,7 @@ class DeviceMethod(BaseModel, ABC):
         return self
 
     async def emit(self, client: ControlHub) -> None:
-        return await client(self)
+        return await client(self, ttl=self.ttl)
 
     @property
     def coro(self) -> Coroutine[Any, Any, None]:
@@ -54,7 +55,9 @@ class DeviceMethodWithResponce(DeviceMethod, Generic[ResponceType], ABC):
     def callback_filters(self) -> list[CallbackFilter]:
         raise NotImplementedError
 
-    def wait_responce(self, timeout: float | None = 10) -> ResponceHandler[ResponceType]:
+    def wait_responce(
+        self, timeout: float | None = 60
+    ) -> ResponceHandler[ResponceType]:
         return ResponceHandler(
             original_method=self,
             callback_filters=self.callback_filters,
@@ -69,7 +72,10 @@ class ResponceHandler(BaseModel, Generic[ResponceType]):
 
     async def emit(self, client: ControlHub) -> ResponceType:
         return await client(
-            self.original_method, self.callback_filters, self.responce_timeout
+            method=self.original_method,
+            callback_filters=self.callback_filters,
+            ttl=self.original_method.ttl,
+            timeout=self.responce_timeout,
         )
 
     @property

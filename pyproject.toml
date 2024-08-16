@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "npc-control-hub"
-version = "0.3.0"
+version = "0.4.0"
 description = "Control hub for NPCs"
 authors = ["toxazhl <zhltoxa@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 msgpack = "^1.0.7"
 pydantic = ">=2.4.1"
 fastmqtt = {git = "https://github.com/toxazhl/fastmqtt"}
