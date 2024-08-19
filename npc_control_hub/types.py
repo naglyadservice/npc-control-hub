@@ -11,6 +11,9 @@ class PinID(enum.StrEnum):
     INPUT_1 = "INPUT_1"
     INPUT_2 = "INPUT_2"
 
+    def __repr__(self) -> str:
+        return f'"{self.value}"'
+
 
 class PinMode(enum.IntEnum):
     INPUT = 0x01
@@ -23,6 +26,9 @@ class PinMode(enum.IntEnum):
     OUTPUT_OPEN_DRAIN = 0x13
     ANALOG = 0xC0
 
+    def __repr__(self) -> str:
+        return str(self.value)
+
 
 class PinState(enum.IntEnum):
     LOW = 0
@@ -30,6 +36,9 @@ class PinState(enum.IntEnum):
 
     def __invert__(self) -> "PinState":
         return PinState.HIGH if self == PinState.LOW else PinState.LOW
+
+    def __repr__(self) -> str:
+        return str(self.value)
 
 
 class VoiceCallState(enum.IntEnum):
@@ -43,7 +52,7 @@ class CallbackFilter(BaseModel):
     mode: PinMode | None = None
     state: PinState | None = None
 
-    def __call__(self, value: "UpdatePin | CallbackFilter") -> bool:
+    def matches(self, value: "UpdatePin | CallbackFilter") -> bool:
         if not isinstance(value, (UpdatePin, CallbackFilter)):
             raise TypeError(
                 f"__value must be UpdatePin or CallbackFilter, not {type(value)}"

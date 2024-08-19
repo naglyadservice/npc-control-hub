@@ -69,7 +69,6 @@ class ControlHub:
         Handle incoming pin update messages.
         TODO: handling "open by phone call" update
         """
-
         m = re.search(r"device/(\w+)/update", message.topic)
         if m is None:
             log.error("Invalid topic: %s", message.topic)
@@ -158,7 +157,7 @@ class ControlHub:
         Check for conflicts between callback filters.
         """
         for filter1, filter2 in itertools.combinations(filters, 2):
-            if filter1(filter2):
+            if filter1.matches(filter2):
                 raise ValueError(f"filters have conflicts ({filter1}, {filter2})")
 
     async def wait_for(
@@ -180,10 +179,11 @@ class ControlHub:
                 return
 
             filters_current = filters.copy()
+
             curr_pins = []
 
             for filter_, pin in itertools.product(filters, update.pins):
-                if filter_(pin):
+                if filter_.matches(pin):
                     curr_pins.append(pin)
                     with contextlib.suppress(ValueError):
                         filters_current.remove(filter_)
